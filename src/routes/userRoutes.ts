@@ -45,6 +45,8 @@ userRoutes.get('/users', async (req, res) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Invalid input
  *       404:
  *         description: User not found
  */
@@ -126,6 +128,8 @@ userRoutes.put('/users/:id', async (req, res) => {
  *     responses:
  *       204:
  *         description: User deleted
+ *       400:
+ *        description: Invalid input
  *       404:
  *         description: User not found
  */
