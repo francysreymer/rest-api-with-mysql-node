@@ -20,6 +20,14 @@ export default class UserController {
     this.userService = userService;
   }
 
+  /**
+   * Find all users with optional filters.
+   * @param req - Express request object.
+   * @param res - Express response object.
+   * @returns Express response object.
+   * @throws Error if an unexpected error occurs.
+   * @throws Error if an invalid query parameter is provided.
+   **/
   async findAll(req: Request, res: Response): Promise<Response> {
     const { error, value: filters } = userFilterSchema.validate(req.query, {
       stripUnknown: true,
@@ -40,6 +48,15 @@ export default class UserController {
     }
   }
 
+  /**
+   * Find a user by id.
+   * @param req - Express request object.
+   * @param res - Express response object.
+   * @returns Express response object.
+   * @throws Error if an invalid id is provided.
+   * @throws Error if user not found.
+   * @throws Error if an unexpected error occurs.
+   */
   async findById(req: Request, res: Response): Promise<Response> {
     const { error, value } = idSchema.validate(req.params);
 
@@ -55,6 +72,14 @@ export default class UserController {
     }
   }
 
+  /**
+   * Create a new user.
+   * @param req - Express request object.
+   * @param res - Express response object.
+   * @returns Express response object.
+   * @throws Error if an invalid user object is provided.
+   * @throws Error if an unexpected error occurs.
+   */
   async create(req: Request, res: Response): Promise<Response> {
     const { error, value } = userSchema.validate(req.body, {
       stripUnknown: true,
@@ -73,6 +98,16 @@ export default class UserController {
     }
   }
 
+  /**
+   * Update a user by id.
+   * @param req - Express request object.
+   * @param res - Express response object.
+   * @returns Express response object.
+   * @throws Error if an invalid id is provided.
+   * @throws Error if an invalid user object is provided.
+   * @throws Error if user not found.
+   * @throws Error if an unexpected error occurs.
+   */
   async update(req: Request, res: Response): Promise<Response> {
     const { error: idError, value: idValue } = idSchema.validate(req.params, {
       stripUnknown: true,
@@ -102,6 +137,14 @@ export default class UserController {
     }
   }
 
+  /**
+   * Delete a user by id.
+   * @param req - Express request object.
+   * @param res - Express response object.
+   * @returns Express response object.
+   * @throws Error if user not found.
+   * @throws Error if an unexpected error occurs.
+   */
   async delete(req: Request, res: Response): Promise<Response> {
     const { error, value } = idSchema.validate(req.params);
 
