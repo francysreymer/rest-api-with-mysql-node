@@ -27,10 +27,9 @@ describe('UserRepository', () => {
 
     const result = await userRepository.findAll(filters);
     expect(result).toHaveLength(1);
-    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-      'entity.name LIKE :name',
-      { name: '%test%' },
-    );
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('user.name LIKE :name', {
+      name: '%test%',
+    });
     expect(queryBuilder.getMany).toHaveBeenCalled();
   });
 

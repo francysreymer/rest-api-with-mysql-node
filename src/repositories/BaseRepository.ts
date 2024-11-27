@@ -31,7 +31,8 @@ export abstract class BaseRepository<T extends Identifiable> {
       });
     }
 
-    return queryBuilder.getMany();
+    const entities = await queryBuilder.getMany();
+    return entities;
   }
 
   async findById(id: number): Promise<T | null> {
