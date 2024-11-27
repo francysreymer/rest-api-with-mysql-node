@@ -1,8 +1,7 @@
 const TYPES = {
-  IUserRepository: Symbol.for('IUserRepository'),
-  IUserService: Symbol.for('IUserService'),
-  DB: Symbol.for('AppDataSource'),
-  MigrationService: Symbol.for('MigrationService'),
+  IRepository: Symbol.for('IRepository'),
+  IService: Symbol.for('IService'),
+  DB: Symbol.for('db'),
   UserController: Symbol.for('UserController'),
 };
 

@@ -1,249 +1,170 @@
 import express from 'express';
-import { writeFileSync, unlinkSync, existsSync, readFileSync } from 'fs';
 import { StatusCodes } from 'http-status-codes';
-import path from 'path';
 import request from 'supertest';
 
 import container from '@/config/container';
 import TYPES from '@/config/types';
-import movieAwardRoutes from '@/routes/userRoutes';
-import MigrationService from '@/services/MigrationService';
+import userRoutes from '@/routes/userRoutes';
+import { DataSource } from 'typeorm';
+import { User } from '@/entities/User';
 
-const URL_API = '/api/movies/producers/award-intervals';
-const tempFilePath = path.join(__dirname, 'testData.csv');
-const standardFilePath = path.join(
-  __dirname,
-  'testData',
-  '../../../../temp/movielist.csv',
-);
-const writeCSVData = (data: string) => {
-  writeFileSync(tempFilePath, data);
-};
-const readCSVData = () => {
-  return readFileSync(standardFilePath, 'utf-8');
-};
-const expectedStandardMaxWinners: WinnerProducer[] = [
-  {
-    producer: 'Matthew Vaughn',
-    interval: 13,
-    previousWin: 2002,
-    followingWin: 2015,
-  },
-];
-const expectedStandardMinWinners: WinnerProducer[] = [
-  {
-    producer: 'Joel Silver',
-    interval: 1,
-    previousWin: 1990,
-    followingWin: 1991,
-  },
-];
+const URL_API = '/api/users';
 
-// Set up the Express app
 const app = express();
 app.use(express.json());
-app.use('/api', movieAwardRoutes);
+app.use('/api', userRoutes);
 
 describe('UserController', () => {
-  const migrationService = container.get<MigrationService>(
-    TYPES.MigrationService,
-  );
+  let db: DataSource;
+
+  beforeAll(async () => {
+    db = container.get<DataSource>(TYPES.DB);
+    await db.initialize();
+  });
+
+  afterAll(async () => {
+    if (db && db.isInitialized) {
+      await db.destroy();
+    }
+  });
 
   beforeEach(async () => {
-    //Run migrations before each test
-    await migrationService.runMigrations();
+    const userRepository = db.getRepository(User);
+    await userRepository.clear();
   });
 
-  afterEach(async () => {
-    // Clean up the temporary file
-    if (existsSync(tempFilePath)) {
-      unlinkSync(tempFilePath);
-    }
-
-    await migrationService.revertMigrations();
-  });
-
-  it('should return producers with the expected MAX and MIN award intervals (using standard CSV data)', async () => {
-    // Read the standard CSV data
-    const standardData = readCSVData();
-    writeCSVData(standardData);
-
-    // Seed the database
-    const seedFromCSVService = container.get<SeedFromCSVService>(
-      TYPES.SeedFromCSVService,
-    );
-    await seedFromCSVService.initializeDataFrom(tempFilePath);
-
+  it('should return an empty list of users', async () => {
     const response = await request(app).get(URL_API);
 
     expect(response.status).toBe(StatusCodes.OK);
-    expect(response.body.max).toEqual(expectedStandardMaxWinners);
-    expect(response.body.min).toEqual(expectedStandardMinWinners);
+    expect(response.body).toEqual([]);
   });
 
-  it('should fail if the data does not match the expected standard MAX and MIN award intervals (using fictitious data)', async () => {
-    // Create a temporary CSV file with different sample data
-    writeCSVData(
-      'year;title;studios;producers;winner\n2011;Zero Interval Win 1;User A;Producer A;yes\n2011;Zero Interval Win 2;User B;Producer A;yes\n',
-    );
+  it('should create a new user', async () => {
+    const newUser = {
+      name: 'John Doe',
+      email: 'john.doe@example.com',
+      password: 'password123',
+      role: 'admin',
+    };
 
-    // Seed the database
-    const seedFromCSVService = container.get<SeedFromCSVService>(
-      TYPES.SeedFromCSVService,
-    );
-    await seedFromCSVService.initializeDataFrom(tempFilePath);
+    const response = await request(app).post(URL_API).send(newUser);
 
-    const response = await request(app).get(URL_API);
+    expect(response.status).toBe(StatusCodes.CREATED);
+    expect(response.body).toMatchObject({
+      name: 'John Doe',
+      email: 'john.doe@example.com',
+      role: 'admin',
+    });
+  });
+
+  it('should return a user by id', async () => {
+    const newUser = {
+      name: 'Jane Doe',
+      email: 'jane.doe@example.com',
+      password: 'password123',
+      role: 'cliente',
+    };
+
+    const createResponse = await request(app).post(URL_API).send(newUser);
+    const userId = createResponse.body.id;
+
+    const response = await request(app).get(`${URL_API}/${userId}`);
 
     expect(response.status).toBe(StatusCodes.OK);
-    expect(response.body.min).not.toEqual(expectedStandardMinWinners);
-    expect(response.body.max).not.toEqual(expectedStandardMaxWinners);
+    expect(response.body).toMatchObject({
+      name: 'Jane Doe',
+      email: 'jane.doe@example.com',
+      role: 'cliente',
+    });
   });
 
-  it('should return producers with the MAX award intervals (using fictitious data)', async () => {
-    // Create a temporary CSV file with sample data
-    writeCSVData(
-      'year;title;studios;producers;winner\n2000;First Win;User A;Producer A;yes\n2010;Second Win;User B;Producer A;yes\n2011;Single Win;User C;Producer B;yes\n',
-    );
+  it('should update a user', async () => {
+    const newUser = {
+      name: 'John Smith',
+      email: 'john.smith@example.com',
+      password: 'password123',
+      role: 'admin',
+    };
 
-    // Seed the database
-    const seedFromCSVService = container.get<SeedFromCSVService>(
-      TYPES.SeedFromCSVService,
-    );
-    await seedFromCSVService.initializeDataFrom(tempFilePath);
+    const createResponse = await request(app).post(URL_API).send(newUser);
+    const userId = createResponse.body.id;
 
-    const response = await request(app).get(URL_API);
+    const updatedUser = {
+      name: 'John Smith Updated',
+      email: 'john.smith.updated@example.com',
+      password: 'password123',
+      role: 'admin',
+    };
 
-    const expectedMaxWinners: WinnerProducer[] = [
-      {
-        producer: 'Producer A',
-        interval: 10,
-        previousWin: 2000,
-        followingWin: 2010,
-      },
-    ];
+    const response = await request(app)
+      .put(`${URL_API}/${userId}`)
+      .send(updatedUser);
 
     expect(response.status).toBe(StatusCodes.OK);
-    expect(response.body.max).toEqual(expectedMaxWinners);
+    expect(response.body).toMatchObject({
+      name: 'John Smith Updated',
+      email: 'john.smith.updated@example.com',
+      role: 'admin',
+    });
   });
 
-  it('should return producers with the MIN award intervals (using fictitious data)', async () => {
-    // Create a temporary CSV file with different sample data
-    writeCSVData(
-      'year;title;studios;producers;winner\n2000;First Win;User A;Producer A;yes\n2011;Single Win;User C;Producer B;yes\n2012;Second Win;User B;Producer A;yes\n2013;Single Win 2;User E;Producer B;yes\n',
-    );
+  it('should delete a user', async () => {
+    const newUser = {
+      name: 'Jane Smith',
+      email: 'jane.smith@example.com',
+      password: 'password123',
+      role: 'cliente',
+    };
 
-    // Seed the database
-    const seedFromCSVService = container.get<SeedFromCSVService>(
-      TYPES.SeedFromCSVService,
-    );
-    await seedFromCSVService.initializeDataFrom(tempFilePath);
+    const createResponse = await request(app).post(URL_API).send(newUser);
+    const userId = createResponse.body.id;
 
-    const response = await request(app).get(URL_API);
+    const response = await request(app).delete(`${URL_API}/${userId}`);
 
-    const expectedMinWinners: WinnerProducer[] = [
-      {
-        producer: 'Producer B',
-        interval: 2,
-        previousWin: 2011,
-        followingWin: 2013,
-      },
-    ];
+    expect(response.status).toBe(StatusCodes.NO_CONTENT);
+  });
+
+  it('should return a list of users filtered by name, email, and roles', async () => {
+    const user1 = {
+      name: 'Alice',
+      email: 'alice@example.com',
+      password: 'password123',
+      role: 'admin',
+    };
+
+    const user2 = {
+      name: 'Bob',
+      email: 'bob@example.com',
+      password: 'password123',
+      role: 'cliente',
+    };
+
+    const user3 = {
+      name: 'Charlie',
+      email: 'charlie@example.com',
+      password: 'password123',
+      role: 'admin',
+    };
+
+    await request(app).post(URL_API).send(user1);
+    await request(app).post(URL_API).send(user2);
+    await request(app).post(URL_API).send(user3);
+
+    const response = await request(app)
+      .get(URL_API)
+      .query({
+        name: 'Alice',
+        email: 'alice@example.com',
+        roles: ['admin'],
+      });
 
     expect(response.status).toBe(StatusCodes.OK);
-    expect(response.body.min).toEqual(expectedMinWinners);
-  });
-
-  it('should handle multiple producers with the same MAX and MIN intervals (using fictitious data)', async () => {
-    // Create a temporary CSV file with different sample data
-    writeCSVData(
-      'year;title;studios;producers;winner\n2012;First Win Test;User A;Producer B;yes\n2000;First Win;User A;Producer A;yes\n2010;Second Win;User B;Producer A;yes\n2011;Single Win;User C;Producer B;yes\n2000;Another First MAX Win;User D;Producer D;yes\n2010;Another Second MAX Win;User E;Producer D;yes\n2000;Another First MIN Win;User F;Producer E;yes\n2001;Another Second MIN Win;User G;Producer E;yes\n',
-    );
-
-    // Seed the database
-    const seedFromCSVService = container.get<SeedFromCSVService>(
-      TYPES.SeedFromCSVService,
-    );
-    await seedFromCSVService.initializeDataFrom(tempFilePath);
-
-    const response = await request(app).get(URL_API);
-
-    const expectedMaxWinners: WinnerProducer[] = [
-      {
-        producer: 'Producer A',
-        interval: 10,
-        previousWin: 2000,
-        followingWin: 2010,
-      },
-      {
-        producer: 'Producer D',
-        interval: 10,
-        previousWin: 2000,
-        followingWin: 2010,
-      },
-    ];
-
-    const expectedMinWinners: WinnerProducer[] = [
-      {
-        producer: 'Producer B',
-        interval: 1,
-        previousWin: 2011,
-        followingWin: 2012,
-      },
-      {
-        producer: 'Producer E',
-        interval: 1,
-        previousWin: 2000,
-        followingWin: 2001,
-      },
-    ];
-
-    expect(response.status).toBe(StatusCodes.OK);
-    expect(response.body.max).toEqual(expectedMaxWinners);
-    expect(response.body.min).toEqual(expectedMinWinners);
-  });
-
-  it('should not return intervals of zero (using fictitious data)', async () => {
-    // Create a temporary CSV file with different sample data
-    writeCSVData(
-      'year;title;studios;producers;winner\n2011;Zero Interval Win 1;User A;Producer A;yes\n2011;Zero Interval Win 2;User B;Producer A;yes\n',
-    );
-
-    // Seed the database
-    const seedFromCSVService = container.get<SeedFromCSVService>(
-      TYPES.SeedFromCSVService,
-    );
-    await seedFromCSVService.initializeDataFrom(tempFilePath);
-
-    const response = await request(app).get(URL_API);
-
-    const expectedMinWinners: WinnerProducer[] = [];
-    const expectedMaxWinners: WinnerProducer[] = [];
-
-    expect(response.status).toBe(200);
-    expect(response.body.min).toEqual(expectedMinWinners);
-    expect(response.body.max).toEqual(expectedMaxWinners);
-  });
-
-  it('should return empty arrays when there are no winners (using fictitious data)', async () => {
-    // Create a temporary CSV file with different sample data
-    writeCSVData(
-      'year;title;studios;producers;winner\n2011;No Winners 1;User A;Producer A;no\n2011;No Winners 2;User B;Producer A;no\n',
-    );
-
-    // Seed the database
-    const seedFromCSVService = container.get<SeedFromCSVService>(
-      TYPES.SeedFromCSVService,
-    );
-    await seedFromCSVService.initializeDataFrom(tempFilePath);
-
-    const response = await request(app).get(URL_API);
-
-    const expectedMinWinners: WinnerProducer[] = [];
-    const expectedMaxWinners: WinnerProducer[] = [];
-
-    expect(response.status).toBe(StatusCodes.OK);
-    expect(response.body.min).toEqual(expectedMinWinners);
-    expect(response.body.max).toEqual(expectedMaxWinners);
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0]).toMatchObject({
+      name: 'Alice',
+      email: 'alice@example.com',
+      role: 'admin',
+    });
   });
 });

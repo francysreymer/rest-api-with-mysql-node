@@ -1,15 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, Column } from 'typeorm';
+
+import { BaseEntity } from '@/entities/BaseEntity';
 
 enum UserRole {
   ADMIN = 'admin',
   CLIENTE = 'cliente',
 }
 
-@Entity()
-export class User {
-  @PrimaryGeneratedColumn()
-  id!: number;
-
+@Entity('users')
+export class User extends BaseEntity {
   @Column({ nullable: false })
   name!: string;
 

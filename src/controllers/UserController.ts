@@ -2,36 +2,40 @@ import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { inject, injectable } from 'inversify';
 
+import { formatErrors } from '@/common/formatErrors';
 import { handleError } from '@/common/handleError';
 import TYPES from '@/config/types';
-import IUserService from '@/contracts/IUserService';
+import IService from '@/contracts/IService';
+import { User } from '@/entities/User';
 import { idSchema } from '@/validators/idSchema';
 import { userFilterSchema } from '@/validators/userFilterSchema';
 import { userSchema } from '@/validators/userSchema';
+import { userUpdateSchema } from '@/validators/userUpdateSchema';
 
 @injectable()
 export default class UserController {
-  private userService: IUserService;
+  private userService: IService<User>;
 
-  constructor(@inject(TYPES.IUserService) userService: IUserService) {
+  constructor(@inject(TYPES.IService) userService: IService<User>) {
     this.userService = userService;
   }
 
   async findAll(req: Request, res: Response): Promise<Response> {
     const { error, value: filters } = userFilterSchema.validate(req.query, {
       stripUnknown: true,
+      abortEarly: false,
     });
 
     if (error) {
-      return res
-        .status(StatusCodes.BAD_REQUEST)
-        .json({ message: error.details[0].message });
+      return res.status(StatusCodes.BAD_REQUEST).json(formatErrors(error));
     }
 
     try {
       const users = await this.userService.findAll(filters);
       return res.json(users);
     } catch (error: unknown) {
+      console.error('francys: ', error);
+
       return handleError(res, error);
     }
   }
@@ -40,9 +44,7 @@ export default class UserController {
     const { error, value } = idSchema.validate(req.params);
 
     if (error) {
-      return res
-        .status(StatusCodes.BAD_REQUEST)
-        .json({ message: error.details[0].message });
+      return res.status(StatusCodes.BAD_REQUEST).json(formatErrors(error));
     }
 
     try {
@@ -56,12 +58,11 @@ export default class UserController {
   async create(req: Request, res: Response): Promise<Response> {
     const { error, value } = userSchema.validate(req.body, {
       stripUnknown: true,
+      abortEarly: false,
     });
 
     if (error) {
-      return res
-        .status(StatusCodes.BAD_REQUEST)
-        .json({ message: error.details[0].message });
+      return res.status(StatusCodes.BAD_REQUEST).json(formatErrors(error));
     }
 
     try {
@@ -75,22 +76,19 @@ export default class UserController {
   async update(req: Request, res: Response): Promise<Response> {
     const { error: idError, value: idValue } = idSchema.validate(req.params, {
       stripUnknown: true,
+      abortEarly: false,
     });
 
     if (idError) {
-      return res
-        .status(StatusCodes.BAD_REQUEST)
-        .json({ message: idError.details[0].message });
+      return res.status(StatusCodes.BAD_REQUEST).json(formatErrors(idError));
     }
 
-    const { error: bodyError, value: bodyValue } = userSchema.validate(
+    const { error: bodyError, value: bodyValue } = userUpdateSchema.validate(
       req.body,
     );
 
     if (bodyError) {
-      return res
-        .status(StatusCodes.BAD_REQUEST)
-        .json({ message: bodyError.details[0].message });
+      return res.status(StatusCodes.BAD_REQUEST).json(formatErrors(bodyError));
     }
 
     try {
@@ -108,9 +106,7 @@ export default class UserController {
     const { error, value } = idSchema.validate(req.params);
 
     if (error) {
-      return res
-        .status(StatusCodes.BAD_REQUEST)
-        .json({ message: error.details[0].message });
+      return res.status(StatusCodes.BAD_REQUEST).json(formatErrors(error));
     }
     try {
       await this.userService.delete(Number(value.id));
