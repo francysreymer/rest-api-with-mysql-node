@@ -44,7 +44,7 @@ Esta API RESTful permite realizar operações CRUD (Create, Read, Update, Delete
 4. **Inicie os containers Docker:**
 
     ```bash
-    docker-compose up -d
+    docker compose up -d
     ```
 
 5. **Inicie o servidor:**
