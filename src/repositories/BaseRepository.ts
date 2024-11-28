@@ -5,6 +5,10 @@ export interface Identifiable {
   id: number;
 }
 
+export interface FilterOptions {
+  [key: string]: unknown;
+}
+
 @injectable()
 export abstract class BaseRepository<T extends Identifiable> {
   protected repository: Repository<T>;
@@ -13,12 +17,12 @@ export abstract class BaseRepository<T extends Identifiable> {
     this.repository = repository;
   }
 
-  async findAll(filters?: Partial<T>): Promise<T[]> {
+  async findAll(filters?: FilterOptions): Promise<T[]> {
     const queryBuilder = this.repository.createQueryBuilder('entity');
 
     if (filters) {
       Object.keys(filters).forEach((key) => {
-        const value = filters[key as keyof T];
+        const value = filters[key];
         if (Array.isArray(value)) {
           queryBuilder.andWhere(`entity.${key} IN (:...${key})`, {
             [key]: value,

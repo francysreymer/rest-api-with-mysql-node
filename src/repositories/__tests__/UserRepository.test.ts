@@ -1,6 +1,6 @@
 import { Repository } from 'typeorm';
 
-import { User } from '@/entities/User';
+import { User, UserRole } from '@/entities/User';
 import UserRepository from '@/repositories/UserRepository';
 
 describe('UserRepository', () => {
@@ -20,16 +20,35 @@ describe('UserRepository', () => {
     userRepository = new UserRepository(repository);
   });
 
-  it('should find all users with filters', async () => {
-    const filters = { name: 'test' };
+  it('should filter users by name, email, and roles', async () => {
+    const filters = {
+      name: 'test',
+      email: 'test@example.com',
+      role: [UserRole.ADMIN, UserRole.CLIENTE] as UserRole[],
+    };
     const queryBuilder = repository.createQueryBuilder();
     (queryBuilder.getMany as jest.Mock).mockResolvedValue([new User()]);
 
     const result = await userRepository.findAll(filters);
     expect(result).toHaveLength(1);
-    expect(queryBuilder.andWhere).toHaveBeenCalledWith('user.name LIKE :name', {
-      name: '%test%',
-    });
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+      'entity.name LIKE :name',
+      {
+        name: '%test%',
+      },
+    );
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+      'entity.email LIKE :email',
+      {
+        email: '%test@example.com%',
+      },
+    );
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+      'entity.role IN (:...role)',
+      {
+        role: ['admin', 'cliente'],
+      },
+    );
     expect(queryBuilder.getMany).toHaveBeenCalled();
   });
 

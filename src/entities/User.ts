@@ -2,7 +2,7 @@ import { Entity, Column } from 'typeorm';
 
 import { BaseEntity } from '@/entities/BaseEntity';
 
-enum UserRole {
+export enum UserRole {
   ADMIN = 'admin',
   CLIENTE = 'cliente',
 }

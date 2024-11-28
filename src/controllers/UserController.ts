@@ -4,6 +4,7 @@ import { inject, injectable } from 'inversify';
 
 import { formatErrors } from '@/common/formatErrors';
 import { handleError } from '@/common/handleError';
+import redisClient from '@/config/redisClient';
 import TYPES from '@/config/types';
 import IService from '@/contracts/IService';
 import { User } from '@/entities/User';
@@ -15,6 +16,7 @@ import { userUpdateSchema } from '@/validators/userUpdateSchema';
 @injectable()
 export default class UserController {
   private userService: IService<User>;
+  private EXPIRES_IN_1_HOUR = 3600;
 
   constructor(@inject(TYPES.IService) userService: IService<User>) {
     this.userService = userService;
@@ -38,12 +40,25 @@ export default class UserController {
       return res.status(StatusCodes.BAD_REQUEST).json(formatErrors(error));
     }
 
+    const cacheKey = JSON.stringify(filters);
     try {
+      // Check if the data is in the cache
+      const cachedUsers = await redisClient.get(cacheKey);
+      if (cachedUsers) {
+        return res.json(JSON.parse(cachedUsers));
+      }
+
+      // If not in cache, fetch from the database
       const users = await this.userService.findAll(filters);
+
+      // Store the result in the cache
+      await redisClient.set(cacheKey, JSON.stringify(users), {
+        EX: this.EXPIRES_IN_1_HOUR,
+      });
+
       return res.json(users);
     } catch (error: unknown) {
-      console.error('francys: ', error);
-
+      console.error('Error fetching users:', error);
       return handleError(res, error);
     }
   }
@@ -92,6 +107,10 @@ export default class UserController {
 
     try {
       const newUser = await this.userService.create(value);
+
+      // Invalidate the cache
+      await redisClient.flushAll();
+
       return res.status(StatusCodes.CREATED).json(newUser);
     } catch (error: unknown) {
       return handleError(res, error);
@@ -131,6 +150,10 @@ export default class UserController {
         bodyValue,
         Number(idValue.id),
       );
+
+      // Invalidate the cache
+      await redisClient.flushAll();
+
       return res.json(updatedUser);
     } catch (error: unknown) {
       return handleError(res, error);
@@ -153,6 +176,10 @@ export default class UserController {
     }
     try {
       await this.userService.delete(Number(value.id));
+
+      // Invalidate the cache
+      await redisClient.flushAll();
+
       return res.status(StatusCodes.NO_CONTENT).send();
     } catch (error: unknown) {
       return handleError(res, error);

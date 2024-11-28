@@ -13,3 +13,9 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_ROOT_HOST: ${MYSQL_ROOT_HOST}
       MYSQL_INITDB_SKIP_TZINFO: ${MYSQL_INITDB_SKIP_TZINFO}
+
+  redis:
+    image: 'redis'
+    container_name: app-redis
+    ports:
+      - "6379:6379"

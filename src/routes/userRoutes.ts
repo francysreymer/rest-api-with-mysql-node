@@ -12,6 +12,23 @@ const userController = container.get<UserController>(TYPES.UserController);
  * /users:
  *   get:
  *     summary: Retrieve a list of users
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         description: Filter by user name
+ *       - in: query
+ *         name: email
+ *         schema:
+ *           type: string
+ *           format: email
+ *         description: Filter by user email
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *         description: Filter by user roles (comma-separated)
  *     responses:
  *       200:
  *         description: A list of users

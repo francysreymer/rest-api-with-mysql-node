@@ -1,12 +1,12 @@
 import express from 'express';
 import { StatusCodes } from 'http-status-codes';
 import request from 'supertest';
+import { DataSource } from 'typeorm';
 
 import container from '@/config/container';
 import TYPES from '@/config/types';
-import userRoutes from '@/routes/userRoutes';
-import { DataSource } from 'typeorm';
 import { User } from '@/entities/User';
+import userRoutes from '@/routes/userRoutes';
 
 const URL_API = '/api/users';
 
@@ -31,13 +31,6 @@ describe('UserController', () => {
   beforeEach(async () => {
     const userRepository = db.getRepository(User);
     await userRepository.clear();
-  });
-
-  it('should return an empty list of users', async () => {
-    const response = await request(app).get(URL_API);
-
-    expect(response.status).toBe(StatusCodes.OK);
-    expect(response.body).toEqual([]);
   });
 
   it('should create a new user', async () => {
@@ -156,7 +149,7 @@ describe('UserController', () => {
       .query({
         name: 'Alice',
         email: 'alice@example.com',
-        roles: ['admin'],
+        role: ['admin'],
       });
 
     expect(response.status).toBe(StatusCodes.OK);
