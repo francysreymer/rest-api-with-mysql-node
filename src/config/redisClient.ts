@@ -10,4 +10,8 @@ redisClient.on('error', (err) => console.error('Redis Client Error', err));
   await redisClient.connect();
 })();
 
+export const closeRedisClient = async () => {
+  await redisClient.quit();
+};
+
 export default redisClient;

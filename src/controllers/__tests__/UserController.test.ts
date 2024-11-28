@@ -4,9 +4,20 @@ import request from 'supertest';
 import { DataSource } from 'typeorm';
 
 import container from '@/config/container';
+import redisClient, { closeRedisClient } from '@/config/redisClient';
 import TYPES from '@/config/types';
 import { User } from '@/entities/User';
 import userRoutes from '@/routes/userRoutes';
+
+jest.mock('@/config/redisClient', () => {
+  const actualRedisClient = jest.requireActual('@/config/redisClient');
+  return {
+    ...actualRedisClient,
+    get: jest.fn(),
+    set: jest.fn(),
+    flushAll: jest.fn(),
+  };
+});
 
 const URL_API = '/api/users';
 
@@ -26,11 +37,13 @@ describe('UserController', () => {
     if (db && db.isInitialized) {
       await db.destroy();
     }
+    await closeRedisClient();
   });
 
   beforeEach(async () => {
     const userRepository = db.getRepository(User);
     await userRepository.clear();
+    jest.clearAllMocks();
   });
 
   it('should create a new user', async () => {
@@ -159,5 +172,26 @@ describe('UserController', () => {
       email: 'alice@example.com',
       role: 'admin',
     });
+  });
+
+  it('should use the cache when fetching users', async () => {
+    const filters = { name: 'Alice' };
+    const cachedUsers = [
+      {
+        id: 1,
+        name: 'Alice',
+        email: 'alice@example.com',
+        role: 'admin',
+      },
+    ];
+    (redisClient.get as jest.Mock).mockResolvedValue(
+      JSON.stringify(cachedUsers),
+    );
+
+    const response = await request(app).get(URL_API).query(filters);
+
+    expect(response.status).toBe(StatusCodes.OK);
+    expect(response.body).toEqual(cachedUsers);
+    expect(redisClient.get).toHaveBeenCalledWith(JSON.stringify(filters));
   });
 });
