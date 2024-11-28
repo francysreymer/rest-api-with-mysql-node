@@ -9,6 +9,7 @@ Uma aplicação usando Node.js, TypeScript, MySQL, Docker e Swagger para documen
 - [Uso](#uso)
 - [Documentação da API](#documentação-da-api)
 - [Testes](#testes)
+- [Diferenciais](#diferenciais)
 
 ## Introdução
 
@@ -79,3 +80,14 @@ A documentação da API está disponível em [http://localhost:3000/api-docs](ht
   "password": "password123",
   "role": "admin"
 }
+```
+
+## Diferenciais
+
+- **Injeção de Dependências com Inversify**: Utilizamos o pacote Inversify para gerenciar a injeção de dependências, facilitando a modularização e testabilidade do código.
+- **TypeScript com Prettier e ESLint**: O projeto é desenvolvido em TypeScript, garantindo tipagem estática e maior segurança no código. Utilizamos Prettier e ESLint para manter a consistência e qualidade do código.
+- **Organização do Código e SOLID**: O código é organizado seguindo os princípios SOLID, garantindo um design de software robusto e fácil de manter.
+- **Swagger para Documentação**: Utilizamos Swagger para gerar a documentação da API de forma automática, facilitando o entendimento e uso da API por outros desenvolvedores.
+- **Cache com Redis para Performance**: Implementamos cache com Redis para melhorar a performance da API, reduzindo a carga no banco de dados e acelerando as respostas.
+- **Testes Automatizados e de Integração**: Implementamos testes automatizados e de integração para garantir a qualidade e a funcionalidade correta da API.
+- **BaseService e BaseRepository**: Criamos um serviço e repositório base que permitem a implementação de CRUDs para outros cadastros com pouco esforço. Este diferencial é especialmente importante, pois permite a reutilização de código e acelera o desenvolvimento de novas funcionalidades.
